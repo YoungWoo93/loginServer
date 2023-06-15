@@ -84,80 +84,9 @@ UINT32 session::incrementIO() {
 /// <summary>
 /// 
 /// </summary>
+/// 
 /// <returns>
-/// true : 정상동작 상태
-/// false : 어떤 이유로든 정상 동작 불가능
 /// </returns>
-
-
-
-/*/
-bool session::sendIO()
-{
-	if (hasCancelIOFlag())
-		return true;
-
-	if (InterlockedExchange16(&sendFlag, 1) == 1)
-		return true;
-
-	size_t sendBufferSize = sendBuffer.size();	// 잠재적 에러 가능, size는 1 이상이지만 연결은 안된 상태일데
-	if (sendBufferSize == 0) { // 보낼게 없어서 종료, 동작은 정상상황
-		InterlockedExchange16(&sendFlag, 0);
-		return true;
-	}
-
-	incrementIO();
-
-	size_t packetCount = sendBufferSize;
-	size_t WSAbufferCount = 0;
-	WSABUF buffer[100];
-
-	// size 체크를 굳이 할 필요가 없을 가능성이 높음
-	for (WSAbufferCount = 0; WSAbufferCount < packetCount; WSAbufferCount++)
-	{
-		serializer* temp = 0;
-		if (sendBuffer.pop(&temp) == false)
-		{
-			WSAbufferCount--;
-			sendBufferSize--;
-			continue;
-		}
-
-		buffer[WSAbufferCount].buf = temp->getHeadPtr();
-		buffer[WSAbufferCount].len = (ULONG)temp->size();
-
-		sendedBuffer.push((char*)&temp, sizeof(serializer*));
-	}
-
-	DWORD temp1 = 0;
-
-	memset(&sendOverlapped, 0, sizeof(OVERLAPPED));
-	auto ret = WSASend(socket, buffer, (DWORD)WSAbufferCount, &temp1, 0, (LPWSAOVERLAPPED)&sendOverlapped, NULL);
-	
-
-	if (ret == SOCKET_ERROR) {
-		auto errorCode = GetLastError();
-		if (errorCode != WSA_IO_PENDING)
-		{
-			if (errorCode != 10054 && errorCode != 10053)
-			{
-				LOG(logLevel::Error, LO_TXT, "WSASend Error " + to_string(errorCode) + "\tby socket " + to_string(socket) + ", id " + to_string(ID));
-				InterlockedExchange16(&sendFlag, 0);
-				//int* temp = nullptr;
-				//*temp = 10;
-			}
-			return false;
-		}
-	}
-
-	if (hasCancelIOFlag()){
-		CancelIoEx((HANDLE)socket, &sendOverlapped);
-	}
-
-	return true;
-}
-/*/
-
 void session::sendIO()
 {
 	if (hasCancelIOFlag())
@@ -222,7 +151,7 @@ void session::sendIO()
 			}
 
 			if (decrementIO() == 0)
-				core->deleteSession(this); // [질문1] 이부분, 각 세션에서 네트워크 엔진의 정보를 알고있게 했는가?
+				core->deleteSession(this);
 
 			return;
 		}
@@ -307,61 +236,10 @@ bool session::collectSendPacket(serializer* p)
 /// <summary>
 /// 
 /// </summary>
+/// 
 /// <returns>
-/// true : 정상동작 상태
-/// false : 어떤 이유로든 정상 동작 불가능
 /// </returns>
 /// 
-/*/ [질문1] 연관
-bool session::recvIO()
-{
-	if (hasCancelIOFlag())
-		return true;
-
-	WSABUF buffer[2];
-	int bufferCount = 1;
-	size_t freeSize = recvBuffer.freeSize();
-
-	buffer[0].buf = recvBuffer.tail();
-	buffer[0].len = (ULONG)recvBuffer.DirectEnqueueSize();
-	freeSize -= (ULONG)recvBuffer.DirectEnqueueSize();
-
-	if (freeSize > 0)
-	{
-		buffer[1].buf = recvBuffer.bufferPtr();
-		buffer[1].len = freeSize;
-		bufferCount = 2;
-	}
-
-
-	DWORD temp1 = 0;
-	DWORD temp2 = 0;
-
-	memset(&recvOverlapped, 0, sizeof(OVERLAPPED));
-	auto ret = WSARecv(socket, buffer, bufferCount, &temp1, &temp2, (LPWSAOVERLAPPED)&recvOverlapped, NULL);
-
-	if (ret == SOCKET_ERROR) {
-		auto errorCode = GetLastError();
-		if (errorCode != WSA_IO_PENDING)
-		{
-			if (errorCode != 10054 && errorCode != 10053)
-			{
-				LOG(logLevel::Error, LO_TXT, "WSARecv Error " + to_string(errorCode) + "\tby socket " + to_string(socket) + ", id " + to_string(ID));
-				//int* temp = nullptr;
-				//*temp = 10;
-			}
-			
-			return false;
-		}
-	}
-	if (hasCancelIOFlag())
-	{
-		CancelIoEx((HANDLE)socket, &sendOverlapped);
-	}
-	return true;
-}
-/*/
-
 void session::recvIO()
 {
 	if (hasCancelIOFlag())
@@ -479,33 +357,6 @@ bool session::recvedPacket(serializer* p)
 
 	return false;
 }
-
-/*/
-bool session::recvedPacket(serializer* p)
-{
-	if (recvBuffer.size() >= sizeof(networkHeader))
-	{
-		networkHeader h;
-		int size = recvBuffer.front((char*)&h, sizeof(networkHeader));
-		if (size != sizeof(networkHeader))
-			return false;
-
-		if (recvBuffer.size() >= sizeof(networkHeader) + h.size)
-		{
-			recvBuffer.pop((char*)p.getPacketHeader(), sizeof(networkHeader) + h.size);
-			p.buffer->moveRear(h.size);
-			p.buffer->moveFront(-(int)sizeof(networkHeader));
-
-			return true;
-		}
-		else
-			return false;
-	}
-
-	return false;
-}
-/*/
-
 
 
 /// <summary>
