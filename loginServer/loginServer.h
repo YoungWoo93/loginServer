@@ -89,8 +89,8 @@ public:
 
 
 
-	void redisUpdate(unsigned long long _accuntNo, char* _sessionKey);
-	bool sessionKeyCheckByDatabase(unsigned long long _accuntNo, char* _sessionKey);
+	void redisUpdate(unsigned long long _accountNo, char* _sessionKey);
+	bool sessionKeyCheckByDatabase(unsigned long long _accountNo, char* _sessionKey);
 
 private:
 	unsigned long long int timeoutThreshold;
